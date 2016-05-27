@@ -6,7 +6,7 @@ using Akka.Actor;
 
 namespace ChartApp.Actors
 {
-    public class ChartingActor : UntypedActor
+    public class ChartingActor : ReceiveActor
     {
         #region Messages
 
@@ -14,10 +14,23 @@ namespace ChartApp.Actors
         {
             public InitializeChart(Dictionary<string, Series> initialSeries)
             {
-                InitialSeries = initialSeries;
+                InitialSeries = new Dictionary<string, Series>(initialSeries);
             }
 
-            public Dictionary<string, Series> InitialSeries { get; private set; }
+            public Dictionary<string, Series> InitialSeries { get; }
+        }
+
+        /// <summary>
+        /// Add a new <see cref="Series"/> to the chart
+        /// </summary
+        public class AddSeries
+        {
+            public AddSeries(Series series)
+            {
+                Series = series;
+            }
+
+            public Series Series { get; }
         }
 
         #endregion
@@ -33,15 +46,9 @@ namespace ChartApp.Actors
         {
             _chart = chart;
             _seriesIndex = seriesIndex;
-        }
 
-        protected override void OnReceive(object message)
-        {
-            if (message is InitializeChart)
-            {
-                var ic = message as InitializeChart;
-                HandleInitialize(ic);
-            }
+            Receive<InitializeChart>(ic => HandleInitialize(ic));
+            Receive<AddSeries>(addSeries => HandleAddSeries(addSeries));
         }
 
         #region Individual Message Type Handlers
@@ -66,6 +73,15 @@ namespace ChartApp.Actors
                     series.Value.Name = series.Key;
                     _chart.Series.Add(series.Value);
                 }
+            }
+        }
+
+        private void HandleAddSeries(AddSeries series)
+        {
+            if (!string.IsNullOrEmpty(series.Series.Name) && !_seriesIndex.ContainsKey(series.Series.Name))
+            {
+                _seriesIndex.Add(series.Series.Name, series.Series);
+                _chart.Series.Add(series.Series);
             }
         }
 
