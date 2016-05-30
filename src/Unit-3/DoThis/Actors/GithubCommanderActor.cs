@@ -46,6 +46,7 @@ namespace GithubActors.Actors
 
         private IActorRef _coordinator;
         private IActorRef _canAcceptJobSender;
+        private RepoKey _repoJob;
 
         private int pendingJobReplies;
 
@@ -61,7 +62,7 @@ namespace GithubActors.Actors
             Receive<CanAcceptJob>(job =>
             {
                 _coordinator.Tell(job);
-
+                _repoJob = job.Repo;
                 BecomeAsking();
             });
         }
@@ -72,6 +73,9 @@ namespace GithubActors.Actors
             // Block, but ask the router for the number of routees. Avoids magic numbers.
             pendingJobReplies = _coordinator.Ask<Routees>(new GetRoutees()).Result.Members.Count();
             Become(Asking);
+
+            // Send ourselves a ReceiveTimeout message if no message within 3 seconds
+            Context.SetReceiveTimeout(TimeSpan.FromSeconds(3));
         }
 
         private void Asking()
@@ -102,12 +106,21 @@ namespace GithubActors.Actors
 
                 BecomeReady();
             });
+
+            Receive<ReceiveTimeout>(timeout =>
+            {
+                _canAcceptJobSender.Tell(new UnableToAcceptJob(_repoJob));
+                BecomeReady();
+            });
         }
 
         private void BecomeReady()
         {
             Become(Ready);
             Stash.UnstashAll();
+
+            // Cancel ReceiveTimeout
+            Context.SetReceiveTimeout(null);
         }
 
         protected override void PreStart()
