@@ -24,6 +24,7 @@ namespace GithubActors
 
         private void GithubAuth_Load(object sender, EventArgs e)
         {
+            tbOAuth.Text = System.Configuration.ConfigurationManager.AppSettings["GitHubAuthenticationToken"];
             linkGhLabel.Links.Add(new LinkLabel.Link() { LinkData = "https://help.github.com/articles/creating-an-access-token-for-command-line-use/" });
             _authActor =
                 Program.GithubActors.ActorOf(Props.Create(() => new GithubAuthenticationActor(lblAuthStatus, this)), ActorPaths.GithubAuthenticatorActor.Name);
