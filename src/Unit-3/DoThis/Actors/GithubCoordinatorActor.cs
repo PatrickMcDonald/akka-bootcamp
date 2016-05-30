@@ -79,7 +79,9 @@ namespace GithubActors.Actors
 
         protected override void PreStart()
         {
-            _githubWorker = Context.ActorOf(Props.Create(() => new GithubWorkerActor(GithubClientFactory.GetClient)));
+            var githubWorkerProps = Props.Create(() => new GithubWorkerActor(GithubClientFactory.GetClient))
+                                         .WithRouter(new RoundRobinPool(10));
+            _githubWorker = Context.ActorOf(githubWorkerProps);
         }
 
         private void Waiting()
